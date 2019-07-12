@@ -3,6 +3,8 @@ var path = require('path');
 var fs = require('fs');
 var spawn = require('child_process').spawn;
 var webpack = require('webpack');
+var getOptions = require('loader-utils').getOptions;
+var validateOptions = require('schema-utils');
 
 antlrJar = path.resolve(__dirname, 'antlr-4.7-complete.jar');
 
@@ -11,13 +13,25 @@ antlrArgs = [
   '-visitor'
 ];
 
+const schema = {
+    type: 'object',
+    properties: {
+        lib: {
+            type: 'string'
+        }
+    }
+};
+
 module.exports.raw = true;
 module.exports = function (grammar) {
+  const options = getOptions(this) || {};
+  validateOptions(schema, options, 'antlr4-webpack-loader');
+
   var callback = this.async();
   var grammarName = extractGrammarName(grammar) || this.emitError('Grammar is not named');
   createTempGrammarFile(grammarName, grammar, function (err, outputDir, grammarFile, cleanup) {
     if (err) { return callback(err); }
-    runAntlr(grammarFile, outputDir, function (err) {
+    runAntlr(grammarFile, outputDir, options, function (err) {
       if (err) { return callback(err); }
       compileAntlr(grammarName, outputDir, callback);
     });
@@ -42,8 +56,12 @@ function createTempGrammarFile(grammarName, grammarData, callback) {
   });
 }
 
-function runAntlr(grammarFile, outputDir, callback) {
-  var antlr = spawn('java', ['-jar', antlrJar, '-o', outputDir, grammarFile].concat(antlrArgs), {
+function runAntlr(grammarFile, outputDir, options, callback) {
+  var arr = ['-jar', antlrJar, '-o', outputDir];
+  if (options.lib) {
+      arr = arr.concat(['-lib', options.lib]);
+  }
+  var antlr = spawn('java', arr.concat(grammarFile).concat(antlrArgs), {
     stdio: [ 'ignore', process.stdout, process.stderr ]
   });
   antlr.on('error', callback);

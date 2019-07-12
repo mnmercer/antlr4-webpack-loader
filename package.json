@@ -29,6 +29,8 @@
     "antlr4": "^4.7.0"
   },
   "dependencies": {
+    "loader-utils": "^1.2.3",
+    "schema-utils": "^1.0.0",
     "tmp": "^0.0.30",
     "webpack": "^2.2.0"
   }
